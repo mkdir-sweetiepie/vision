@@ -1,0 +1,69 @@
+/**
+ * @file /include/sliding/qnode.hpp
+ *
+ * @brief Communications central!
+ *
+ * @date February 2011
+ **/
+/*****************************************************************************
+** Ifdefs
+*****************************************************************************/
+
+#ifndef sliding_QNODE_HPP_
+#define sliding_QNODE_HPP_
+
+/*****************************************************************************
+** Includes
+*****************************************************************************/
+
+// To workaround boost/qt4 problems that won't be bugfixed. Refer to
+//    https://bugreports.qt.io/browse/QTBUG-22829
+#ifndef Q_MOC_RUN
+#include <ros/ros.h>
+#endif
+#include <string>
+#include <QThread>
+#include <QStringListModel>
+#include <QString>
+#include <sensor_msgs/Image.h>
+#include <cv_bridge/cv_bridge.h>
+#include <image_transport/image_transport.h>
+
+/*****************************************************************************
+** Namespaces
+*****************************************************************************/
+
+namespace sliding
+{
+/*****************************************************************************
+** Class
+*****************************************************************************/
+
+class QNode : public QThread
+{
+  Q_OBJECT
+public:
+  QNode(int argc, char** argv);
+  virtual ~QNode();
+  bool init();
+  void run();
+
+  cv::Mat *imgRaw = NULL;
+  bool isreceived = false;
+
+Q_SIGNALS:
+  void rosShutdown();
+
+  void sigRcvImg();
+
+private:
+  int init_argc;
+  char** init_argv;
+
+  image_transport::Subscriber subImage;
+  void callbackImage(const sensor_msgs::ImageConstPtr& msg_img);
+};
+
+}  // namespace sliding
+
+#endif /* sliding_QNODE_HPP_ */
