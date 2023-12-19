@@ -60,8 +60,9 @@ public Q_SLOTS:
   cv::Mat morphological_transformation(cv::Mat image);
   cv::Mat canny_edge(cv::Mat image);
   cv::Mat mergeImages(const cv::Mat& whiteImage, const cv::Mat& yellowImage, const cv::Mat& redImage);
+  void drawline(cv::Mat& Image);
 
-  cv::Mat cutImages(cv::Mat& cloneImage);
+      cv::Mat cutImages(cv::Mat& cloneImage);
   void findAndDrawContours(cv::Mat& closed, cv::Mat& image);
   void trimAndSaveImage(const cv::Mat& image, const std::vector<std::vector<cv::Point>>& contours, int maxWidth,
                         int maxHeight);

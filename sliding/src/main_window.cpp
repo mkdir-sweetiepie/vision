@@ -47,7 +47,8 @@ MainWindow::~MainWindow()
 /*****************************************************************************
 ** Functions
 *****************************************************************************/
-//delete로 고치기
+// delete로 고치기
+
 // 이미지 처리 및 UI 업데이트를 수행
 void MainWindow::slotUpdateImg()
 {
@@ -86,8 +87,9 @@ void MainWindow::slotUpdateImg()
   int white_ROI_value[8] = { 241, 270, 480, 270, 480, 0, 241, 0 };  // 좌측 하단 꼭지점, 우측 하단 꼭지점, 우측 상단
                                                                     // 꼭지점, 좌측 상단 꼭지점
   cv::Mat wroi = region_of_interest(white_img, white_ROI_value);  // 흰색 관심 영역 설정
-  cv::Mat mw = morphological_transformation(wroi);
-  cv::Mat white_edge = canny_edge(mw);  // 흰색 Canny 엣지 검출 적용
+  //cv::Mat mw = morphological_transformation(wroi);
+  cv::Mat white_edge = canny_edge(wroi);  // 흰색 Canny 엣지 검출 적용
+  drawline(white_edge);
   QImage white_QImage(white_edge.data, white_edge.cols, white_edge.rows, white_edge.step, QImage::Format_Grayscale8);
   ui.white->setPixmap(QPixmap::fromImage(white_QImage));
 
@@ -97,8 +99,9 @@ void MainWindow::slotUpdateImg()
   int yellow_ROI_value[8] = { 0, 270, 240, 270, 240, 0, 0, 0 };  // 좌측 하단 꼭지점, 우측 하단 꼭지점, 우측 상단
                                                                  // 꼭지점, 좌측 상단 꼭지점
   cv::Mat yroi = region_of_interest(yellow_img, yellow_ROI_value);  // 노란색 관심 영역 설정
-  cv::Mat my = morphological_transformation(yroi);
-  cv::Mat yellow_edge = canny_edge(my);  // 노란색 Canny 엣지 검출 적용
+  //cv::Mat my = morphological_transformation(yroi);
+  cv::Mat yellow_edge = canny_edge(yroi);  // 노란색 Canny 엣지 검출 적용
+  drawline(yellow_edge);
   QImage yellow_QImage(yellow_edge.data, yellow_edge.cols, yellow_edge.rows, yellow_edge.step,
                        QImage::Format_Grayscale8);
   ui.yellow->setPixmap(QPixmap::fromImage(yellow_QImage));
@@ -109,32 +112,36 @@ void MainWindow::slotUpdateImg()
   int red_ROI_value[8] = { 0, 100, 480, 100, 480, 0, 0, 0 };  // 좌측 하단 꼭지점, 우측 하단 꼭지점, 우측 상단 꼭지점,
                                                               // 좌측 상단 꼭지점
   cv::Mat rroi = region_of_interest(red_img, red_ROI_value);  // 빨간색 관심 영역 설정
-  cv::Mat mr = morphological_transformation(rroi);
-  cv::Mat red_edge = canny_edge(mr);  // 빨간색 Canny 엣지 검출 적용
+  //cv::Mat mr = morphological_transformation(rroi);
+  cv::Mat red_edge = canny_edge(rroi);  // 빨간색 Canny 엣지 검출 적용
+  drawline(red_edge);
   QImage red_QImage(red_edge.data, red_edge.cols, red_edge.rows, red_edge.step, QImage::Format_Grayscale8);
   ui.red->setPixmap(QPixmap::fromImage(red_QImage));
 
   // 흰색+노란색+빨간색 합쳐진 이미지(mergedImage), 외각 강조 이미지(binaryImage)
-  cv::Mat addImage = mergeImages(white_img, yellow_img, red_img);
+  cv::Mat addImage = mergeImages(wroi, yroi, rroi);
   QImage binaryQImage(addImage.data, addImage.cols, addImage.rows, addImage.step, QImage::Format_Grayscale8);
   ui.result->setPixmap(QPixmap::fromImage(binaryQImage));
 
   //초록색 선 이미지(red_img) :
-  /*int green_HSV_value[6] = { 0, 50, 0, 45, 255, 255 };  // low h, low s, low v, high h, high s, high v
-  cv::Mat green_img = Binary(img, green_HSV_value);     // 초록색 선 이진화
-  int green_ROI_value[8] = { 0, 270, 480, 270, 480, 0, 0, 0 };
-  cv::Mat groi = region_of_interest(green_img, green_ROI_value);
-  cv::Mat green = cutImages(groi);  // 초록색 관심 영역 설정
-  QImage green_QImage(green.data, green.cols, green.rows, green.step, QImage::Format_Grayscale8);
-  ui.green->setPixmap(QPixmap::fromImage(green_QImage));
+  // int green_HSV_value[6] = { 0, 58, 28, 40, 255, 255 };  // low h, low s, low v, high h, high s, high v
+  // cv::Mat green_img = Binary(img, green_HSV_value);     // 초록색 선 이진화
+  // int green_ROI_value[8] = { 200, 135, 260, 135, 260, 70, 200, 70 };
+  // cv::Mat groi = region_of_interest(green_img, green_ROI_value);
+  // cv::Mat green = cutImages(groi);  // 초록색 관심 영역 설정
+  // QImage green_QImage(green.data, green.cols, green.rows, green.step, QImage::Format_Grayscale8);
+  // ui.green->setPixmap(QPixmap::fromImage(green_QImage));
 
-  findAndDrawContours(green, img);*/
-  // findAndDrawContours(groi_conversion, img);
+  // findAndDrawContours(green, img);
 
   /*****************************************************************************
    ** 초기화
    *****************************************************************************/
-  qnode.imgRaw = nullptr;
+  if (qnode.imgRaw != nullptr)
+  {
+    delete qnode.imgRaw;     // 동적으로 할당된 이미지 데이터 해제
+    qnode.imgRaw = nullptr;  // 포인터를 NULL로 설정하여 dangling pointer 문제 방지
+  }
   qnode.isreceived = false;
 }
 
@@ -306,7 +313,25 @@ cv::Mat MainWindow::mergeImages(const cv::Mat& whiteImage, const cv::Mat& yellow
   return add;
 }
 
-/* ||||||||||||||||||||||||||||||||||||| 표지판 인식 |||||||||||||||||||||||||||||||||||||| */
+// 3줄 긋기
+void MainWindow::drawline(cv::Mat& Image)
+{
+  cv::Point p1(0, HALF_HEIGHT);
+  cv::Point p2(IMAGE_WIDTH, HALF_HEIGHT);
+  cv::line(Image, p1, p2, cv::Scalar(255, 0, 0), 2);
+
+  cv::Point p3(0, HALF_HEIGHT + 50);
+  cv::Point p4(IMAGE_WIDTH, HALF_HEIGHT + 50);
+  cv::line(Image, p3, p4, cv::Scalar(255, 0, 0), 2);
+
+  cv::Point p5(0, HALF_HEIGHT - 50);
+  cv::Point p6(IMAGE_WIDTH, HALF_HEIGHT - 50);
+  cv::line(Image, p5, p6, cv::Scalar(255, 0, 0), 2);
+}
+
+/*****************************************************************************
+ ** 표지판 인식 :
+ *****************************************************************************/
 // 외각선 따는 함수
 cv::Mat MainWindow::cutImages(cv::Mat& cloneImage)
 {
