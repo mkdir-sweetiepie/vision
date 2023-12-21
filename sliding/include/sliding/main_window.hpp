@@ -47,8 +47,14 @@ public:
   int value_sign[6];  // sign hsv
   int value_line[6];  // line hsv
 
-public Q_SLOTS:
-  void slotUpdateImg();
+  int go_stop_flag = 0;
+  int init_v = 0;
+
+  int mani_auto_flag = 1;
+  int angle1 = 0;  //초기값 입력
+  int angle2 = 0;
+  int angle3 = 0;
+  int angle4 = 0;
 
   void Find_Line_Binary_img(cv::Mat& cloneImage);
   void Find_Sign_Binary_img(cv::Mat& cloneImage);
@@ -62,10 +68,19 @@ public Q_SLOTS:
   cv::Mat mergeImages(const cv::Mat& whiteImage, const cv::Mat& yellowImage, const cv::Mat& redImage);
   void drawline(cv::Mat& Image);
 
-      cv::Mat cutImages(cv::Mat& cloneImage);
+  cv::Mat cutImages(cv::Mat& cloneImage);
   void findAndDrawContours(cv::Mat& closed, cv::Mat& image);
   void trimAndSaveImage(const cv::Mat& image, const std::vector<std::vector<cv::Point>>& contours, int maxWidth,
                         int maxHeight);
+
+  void display_view();
+
+public Q_SLOTS:
+  void slotUpdateImg();
+  void Mani();
+  void Auto();
+  void autorace_go();
+  void autorace_stop();
 
 private:
   Ui::MainWindowDesign ui;

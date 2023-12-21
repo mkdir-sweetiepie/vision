@@ -35,9 +35,13 @@ MainWindow::MainWindow(int argc, char** argv, QWidget* parent) : QMainWindow(par
   qnode.init();
 
   QObject::connect(&qnode, SIGNAL(rosShutdown()), this, SLOT(close()));
-
   // subscribe한 이미지의 callback에서 시그널을 발생시켜 위 함수를 부른다.
   QObject::connect(&qnode, SIGNAL(sigRcvImg()), this, SLOT(slotUpdateImg()));
+
+  QObject::connect(ui.manipulation, SIGNAL(clicked()), this, SLOT(Mani()));
+  QObject::connect(ui.autorace, SIGNAL(clicked()), this, SLOT(Auto()));
+  QObject::connect(ui.GO_button, SIGNAL(clicked()), this, SLOT(autorace_go()));
+  QObject::connect(ui.STOP_button, SIGNAL(clicked()), this, SLOT(autorace_stop()));
 }
 
 MainWindow::~MainWindow()
@@ -58,10 +62,10 @@ void MainWindow::slotUpdateImg()
   cv::Mat img = qnode.imgRaw->clone();                               // 원본 이미지
   cv::resize(img, img, cv::Size(480, 270), 0, 0, cv::INTER_LINEAR);  // 리사이즈
 
-  QImage first_image(img.data, img.cols, img.rows, img.step, QImage::Format_RGB888);  // 첫번째 UI
-  ui.origin->setPixmap(QPixmap::fromImage(first_image));
-  QImage third_image(img.data, img.cols, img.rows, img.step, QImage::Format_RGB888);  // 세번째 UI
-  ui.origin_3->setPixmap(QPixmap::fromImage(third_image));
+  QImage origin_image(img.data, img.cols, img.rows, img.step, QImage::Format_RGB888);  // 첫번째 UI
+  ui.origin->setPixmap(QPixmap::fromImage(origin_image));
+  QImage origin_2_image(img.data, img.cols, img.rows, img.step, QImage::Format_RGB888);  // 세번째 UI
+  ui.origin_2->setPixmap(QPixmap::fromImage(origin_2_image));
 
   /*****************************************************************************
    ** 버드아이뷰 이미지(bird_eye)
@@ -69,6 +73,8 @@ void MainWindow::slotUpdateImg()
   cv::Mat bird_eye = Bird_eye_view(img);
   QImage bird_image(bird_eye.data, bird_eye.cols, bird_eye.rows, bird_eye.step, QImage::Format_RGB888);
   ui.bird->setPixmap(QPixmap::fromImage(bird_image));
+  QImage bird_2_image(bird_eye.data, bird_eye.cols, bird_eye.rows, bird_eye.step, QImage::Format_RGB888);
+  ui.bird_2->setPixmap(QPixmap::fromImage(bird_2_image));
 
   cv::Mat cloneImage = bird_eye.clone();
 
@@ -87,7 +93,7 @@ void MainWindow::slotUpdateImg()
   int white_ROI_value[8] = { 241, 270, 480, 270, 480, 0, 241, 0 };  // 좌측 하단 꼭지점, 우측 하단 꼭지점, 우측 상단
                                                                     // 꼭지점, 좌측 상단 꼭지점
   cv::Mat wroi = region_of_interest(white_img, white_ROI_value);  // 흰색 관심 영역 설정
-  //cv::Mat mw = morphological_transformation(wroi);
+  // cv::Mat mw = morphological_transformation(wroi);
   cv::Mat white_edge = canny_edge(wroi);  // 흰색 Canny 엣지 검출 적용
   drawline(white_edge);
   QImage white_QImage(white_edge.data, white_edge.cols, white_edge.rows, white_edge.step, QImage::Format_Grayscale8);
@@ -99,7 +105,7 @@ void MainWindow::slotUpdateImg()
   int yellow_ROI_value[8] = { 0, 270, 240, 270, 240, 0, 0, 0 };  // 좌측 하단 꼭지점, 우측 하단 꼭지점, 우측 상단
                                                                  // 꼭지점, 좌측 상단 꼭지점
   cv::Mat yroi = region_of_interest(yellow_img, yellow_ROI_value);  // 노란색 관심 영역 설정
-  //cv::Mat my = morphological_transformation(yroi);
+  // cv::Mat my = morphological_transformation(yroi);
   cv::Mat yellow_edge = canny_edge(yroi);  // 노란색 Canny 엣지 검출 적용
   drawline(yellow_edge);
   QImage yellow_QImage(yellow_edge.data, yellow_edge.cols, yellow_edge.rows, yellow_edge.step,
@@ -112,7 +118,7 @@ void MainWindow::slotUpdateImg()
   int red_ROI_value[8] = { 0, 100, 480, 100, 480, 0, 0, 0 };  // 좌측 하단 꼭지점, 우측 하단 꼭지점, 우측 상단 꼭지점,
                                                               // 좌측 상단 꼭지점
   cv::Mat rroi = region_of_interest(red_img, red_ROI_value);  // 빨간색 관심 영역 설정
-  //cv::Mat mr = morphological_transformation(rroi);
+  // cv::Mat mr = morphological_transformation(rroi);
   cv::Mat red_edge = canny_edge(rroi);  // 빨간색 Canny 엣지 검출 적용
   drawline(red_edge);
   QImage red_QImage(red_edge.data, red_edge.cols, red_edge.rows, red_edge.step, QImage::Format_Grayscale8);
@@ -122,6 +128,8 @@ void MainWindow::slotUpdateImg()
   cv::Mat addImage = mergeImages(wroi, yroi, rroi);
   QImage binaryQImage(addImage.data, addImage.cols, addImage.rows, addImage.step, QImage::Format_Grayscale8);
   ui.result->setPixmap(QPixmap::fromImage(binaryQImage));
+  QImage binary_2_QImage(addImage.data, addImage.cols, addImage.rows, addImage.step, QImage::Format_Grayscale8);
+  ui.line->setPixmap(QPixmap::fromImage(binary_2_QImage));
 
   //초록색 선 이미지(red_img) :
   // int green_HSV_value[6] = { 0, 58, 28, 40, 255, 255 };  // low h, low s, low v, high h, high s, high v
@@ -131,8 +139,11 @@ void MainWindow::slotUpdateImg()
   // cv::Mat green = cutImages(groi);  // 초록색 관심 영역 설정
   // QImage green_QImage(green.data, green.cols, green.rows, green.step, QImage::Format_Grayscale8);
   // ui.green->setPixmap(QPixmap::fromImage(green_QImage));
-
+  // QImage green_2_QImage(green.data, green.cols, green.rows, green.step, QImage::Format_Grayscale8);
+  // ui.sign->setPixmap(QPixmap::fromImage(green_2_QImage));
   // findAndDrawContours(green, img);
+
+  display_view();
 
   /*****************************************************************************
    ** 초기화
@@ -168,12 +179,12 @@ void MainWindow::Find_Line_Binary_img(cv::Mat& cloneImage)
   value_line[5] = ui.horizontalSlider_6->value();  // high v
 
   // 슬라이더 값
-  ui.label_1->setText(QString::number(value_line[0]));
-  ui.label_2->setText(QString::number(value_line[1]));
-  ui.label_3->setText(QString::number(value_line[2]));
-  ui.label_4->setText(QString::number(value_line[3]));
-  ui.label_5->setText(QString::number(value_line[4]));
-  ui.label_6->setText(QString::number(value_line[5]));
+  ui.l_1->display(value_line[0]);
+  ui.l_2->display(value_line[1]);
+  ui.l_3->display(value_line[2]);
+  ui.l_4->display(value_line[3]);
+  ui.l_5->display(value_line[4]);
+  ui.l_6->display(value_line[5]);
 }
 
 // 표지판 이진화 찾는 함수
@@ -196,12 +207,12 @@ void MainWindow::Find_Sign_Binary_img(cv::Mat& img)
   value_sign[5] = ui.horizontalSlider_12->value();  // high v
 
   // 슬라이더 값
-  ui.label_7->setText(QString::number(value_sign[0]));
-  ui.label_8->setText(QString::number(value_sign[1]));
-  ui.label_9->setText(QString::number(value_sign[2]));
-  ui.label_10->setText(QString::number(value_sign[3]));
-  ui.label_11->setText(QString::number(value_sign[4]));
-  ui.label_12->setText(QString::number(value_sign[5]));
+  ui.s_1->display(value_sign[0]);
+  ui.s_2->display(value_sign[1]);
+  ui.s_3->display(value_sign[2]);
+  ui.s_4->display(value_sign[3]);
+  ui.s_5->display(value_sign[4]);
+  ui.s_6->display(value_sign[5]);
 }
 
 /*****************************************************************************
@@ -438,5 +449,41 @@ void MainWindow::trimAndSaveImage(const cv::Mat& image, const std::vector<std::v
   QImage signre_QImage(resized_img.data, resized_img.cols, resized_img.rows, resized_img.step, QImage::Format_RGB888);
   ui.result_2->setPixmap(QPixmap::fromImage(signre_QImage));
 }
+
+/*****************************************************************************
+ ** 자율주행 :
+ *****************************************************************************/
+void MainWindow::display_view()
+{
+  ui.Mani_Auto->display(mani_auto_flag);
+  ui.Go_Stop->display(go_stop_flag);
+  
+  ui.m_1->display(angle1);
+  ui.m_2->display(angle2);
+  ui.m_3->display(angle3);
+  ui.m_4->display(angle4);
+
+}
+
+void MainWindow::Mani()
+{
+  mani_auto_flag = 1;
+}
+void MainWindow::Auto()
+{
+  mani_auto_flag = 0;
+}
+
+void MainWindow::autorace_go()
+{
+  go_stop_flag = 1;
+  init_v = 0;
+}
+void MainWindow::autorace_stop()
+{
+  go_stop_flag = 0;
+}
+
+
 
 }  // namespace sliding

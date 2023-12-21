@@ -26,6 +26,8 @@
 #include <QStringListModel>
 #include <QString>
 #include <sensor_msgs/Image.h>
+#include <geometry_msgs/Twist.h>
+//#include <tutorial_msgs/mydmxel.h>
 #include <cv_bridge/cv_bridge.h>
 #include <image_transport/image_transport.h>
 
@@ -61,7 +63,16 @@ private:
   char** init_argv;
 
   image_transport::Subscriber subImage;
+  //ros::Subscriber subJoy;
+  
+  geometry_msgs::Twist twist;
+  ros::Publisher init_pub;
+  ros::Publisher pantilt_pub;
+  ros::Publisher cmd_vel_pub;
+  
   void callbackImage(const sensor_msgs::ImageConstPtr& msg_img);
+  //void callbackJoy(const tutorial_msgs::mydmxelConstPtr& msg);
+
 };
 
 }  // namespace sliding
